@@ -19,8 +19,8 @@ var client *oss.Client
 
 func InitOssClient() {
 	endpoint := "http://oss-cn-shanghai.aliyuncs.com"
-	accessKeyId := "LTAI5t5o2Hb6r7sYArAnDJKo"
-	accessKeySecret := "kpKDBy2rYjrKT5r4E4NHDbwm9n6QGm"
+	accessKeyId := "。。。。。。"
+	accessKeySecret := "、、、、"
 
 	var err error
 	client, err = oss.New(endpoint, accessKeyId, accessKeySecret)
