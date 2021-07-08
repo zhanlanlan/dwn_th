@@ -62,7 +62,7 @@ func GenerateToken(user model.User) (token string, err error) {
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, Claim{
 		User: user,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			ExpiresAt: time.Now().Add(time.Hour * 6).Unix(),
 		},
 	})
 

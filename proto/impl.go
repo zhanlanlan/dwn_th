@@ -23,4 +23,5 @@ var (
 	FileAlreadyExist = &Base{Code: 2002, Msg: "文件名已存在"}
 	InvalidDir       = &Base{Code: 2003, Msg: "非法的目录名"}
 	ReadFileFail     = &Base{Code: 2004, Msg: "读取文件失败"}
+	GetTokenFail     = &Base{Code: 2005, Msg: "获取token失败"}
 )

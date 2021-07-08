@@ -9,14 +9,21 @@ import (
 	"os"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/joho/godotenv"
 )
 
 var client *oss.Client
 
 func InitOssClient() {
-	endpoint := "http://oss-cn-shanghai.aliyuncs.com"
-	accessKeyId := "。。。。。。"
-	accessKeySecret := "、、、ccccc、"
+
+	er := godotenv.Load()
+	if er != nil {
+		log.Fatalf("加载oss参数失败:%s", er.Error())
+	}
+
+	endpoint := os.Getenv("endpoint")
+	accessKeyId := os.Getenv("accessKeyId")
+	accessKeySecret := os.Getenv("accessKeySecret")
 
 	var err error
 	client, err = oss.New(endpoint, accessKeyId, accessKeySecret)

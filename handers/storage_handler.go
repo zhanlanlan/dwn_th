@@ -110,7 +110,7 @@ func Mkdir(c *gin.Context) {
 		return
 	}
 
-	ret := services.Mkdir(c, req.Pwd, req.Name, claim.User.ID)
+	ret := services.Mkdir(c, req.Pwd, req.Name, int64(claim.User.ID))
 	proto.Success(c, ret)
 }
 

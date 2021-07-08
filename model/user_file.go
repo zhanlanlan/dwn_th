@@ -14,7 +14,7 @@ type UserFile struct {
 	UserId   int64  `gorm:"column:user_id; not null"`
 	FileId   int64  `gorm:"column:file_id; not null"`
 	Pwd      string `gorm:"column:pwd; size:1024; not null"`
-	FileName string `gorm:"column:file_name; size:255; not null; unique"`
+	FileName string `gorm:"column:file_name; size:255; not null"`
 	FileType int    `gorm:"column:file_type; not null"`
 	Ext      string `gorm:"column:ext; size:50; default:"`
 }
@@ -45,6 +45,17 @@ func GetFile(ctx context.Context, pwd string, name string) (f UserFile, err erro
 
 func CreateUserFile(ctx context.Context, uf *UserFile) error {
 	return TUserFile(ctx).Create(uf).Error
+
+}
+
+func GetUserFileByPwdANDFileName(ctx context.Context, pwd string, filename string) (uf UserFile, err error) {
+	err = TUserFile(ctx).Where("pwd = ? AND file_name = ?", pwd, filename).First(&uf).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = proto.FileNotFound
+		return
+	}
+	return
+
 }
 
 func GetFileByOwner(ctx context.Context, owner int64, pwd string, fileName string) (f UserFile, err error) {

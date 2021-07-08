@@ -20,6 +20,8 @@ import (
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 func utilGenerateKey(fileName string) string {
@@ -69,7 +71,7 @@ func Download(ctx context.Context, userID int64, pwd string, fileName string) ([
 	return file, proto.StdSuccess
 }
 
-func Mkdir(ctx context.Context, pwd, name string, owner uint) *proto.Base {
+func Mkdir(ctx context.Context, pwd, name string, userid int64) *proto.Base {
 	// 检查父目录是否存在
 	pwd = path.Clean(pwd)
 
@@ -85,16 +87,17 @@ func Mkdir(ctx context.Context, pwd, name string, owner uint) *proto.Base {
 	}
 
 	// 校验文件是否已存在
-	_, err := model.GetFile(ctx, pwd, name)
+	_, err := model.GetUserFileByPwdANDFileName(ctx, pwd, name)
 	if errors.Is(err, proto.FileNotFound) {
 		// 文件不存在  可以创建目录
-		f := model.File{
-			FileKey: "",
-			URI:     "",
-			Size:    0,
-			Hash:    "",
+		uf := model.UserFile{
+
+			UserId:   userid,
+			Pwd:      pwd,
+			FileName: name,
+			FileType: model.TypeDir,
 		}
-		err := model.CreateFile(ctx, &f)
+		err := model.CreateUserFile(ctx, &uf)
 		if err != nil {
 			return proto.InternalErr
 		}
@@ -166,12 +169,17 @@ func TryUpload(ctx context.Context, filehash string, userid int64) *proto.Base {
 		ExpireTime: 3600,
 		UserID:     userid,
 	}
-	uploadtoken := upload.Marshal()
+	uploadtoken, err := GetToken(upload)
 
-	return &proto.Base{
-		Code: 200,
-		Msg:  "success",
-		Data: uploadtoken,
+	if err != nil {
+		log.Printf("获取token失败: %s", err.Error())
+		return proto.GetTokenFail
+	} else {
+		return &proto.Base{
+			Code: 200,
+			Msg:  "success",
+			Data: uploadtoken,
+		}
 	}
 
 }
@@ -196,6 +204,41 @@ func (u *UploadToken) Unmarshal(token string) error {
 	return json.Unmarshal(data, u)
 }
 
+type UploadTokenClaim struct {
+	Uploadtoken UploadToken
+	jwt.StandardClaims
+}
+
+func GetToken(upt UploadToken) (token string, err error) {
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, UploadTokenClaim{
+		Uploadtoken: upt,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 6).Unix(),
+		},
+	})
+
+	return t.SignedString([]byte("fuck"))
+}
+func VerifyToken(t string) *UploadTokenClaim {
+
+	var uptclaim UploadTokenClaim
+	token, err := jwt.ParseWithClaims(t, &uptclaim, func(token *jwt.Token) (interface{}, error) { return []byte("fuck"), nil })
+
+	if err != nil {
+		log.Printf("解析token失败: %s", err.Error())
+		return nil
+	}
+
+	if uptclaim, ok := token.Claims.(*UploadTokenClaim); ok && token.Valid {
+		log.Printf("身份验证成功")
+		return uptclaim
+	} else {
+		log.Printf("解析token失败")
+
+		return nil
+	}
+}
+
 type UploadFileOPT struct {
 	FileName string
 	UserID   int64
@@ -216,14 +259,13 @@ func UploadFile(ctx context.Context, opt UploadFileOPT) *proto.Base {
 			return proto.DirNotExist
 		}
 	}
-
-	_, err := model.GetFile(ctx, pwd, opt.FileName)
 	upt := UploadToken{
 		FileKey:    createFileKey(),
 		ExpireTime: 3600,
 		UserID:     opt.UserID,
 	}
-	uploadtoken := upt.Marshal()
+
+	_, err := model.GetFile(ctx, pwd, opt.FileName)
 	if errors.Is(err, proto.FileNotFound) {
 		objName := utilGenerateKey(opt.FileName)
 		err := storage.Put(objName, opt.File)
@@ -255,6 +297,10 @@ func UploadFile(ctx context.Context, opt UploadFileOPT) *proto.Base {
 
 	// 上传到oss
 
+	uploadtoken, er := GetToken(upt)
+	if er != nil {
+		return proto.GetTokenFail
+	}
 	return &proto.Base{
 		Code: 200,
 		Msg:  "success",
@@ -280,10 +326,10 @@ func hashFile(f io.Reader) string {
 }
 
 func ConfirmUpload(ctx context.Context, uploadtoken string, userid int64, pwd string, filename string) *proto.Base {
-	upt := UploadToken{}
-	upt.Unmarshal(uploadtoken)
 
-	file, err := model.GetFileByFileKey(ctx, upt.FileKey)
+	upt := VerifyToken(uploadtoken)
+
+	file, err := model.GetFileByFileKey(ctx, upt.Uploadtoken.FileKey)
 
 	if err != nil {
 		log.Printf("File not found")
@@ -305,4 +351,47 @@ func ConfirmUpload(ctx context.Context, uploadtoken string, userid int64, pwd st
 	}
 	return proto.StdSuccess
 
+}
+
+type ShareToken struct {
+	UserID     int64
+	ExpireTime int64
+	FileName   string
+	FileExt    string
+	FileKey    string
+}
+
+type ShareTokenClaim struct {
+	Sharetoken ShareToken
+	jwt.StandardClaims
+}
+
+func GetShareToken(st ShareToken) (token string, err error) {
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, ShareTokenClaim{
+		Sharetoken: st,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 6).Unix(),
+		},
+	})
+
+	return t.SignedString([]byte("fuck"))
+}
+func VerifyShareToken(t string) *ShareTokenClaim {
+
+	var stclaim ShareTokenClaim
+	token, err := jwt.ParseWithClaims(t, &stclaim, func(token *jwt.Token) (interface{}, error) { return []byte("fuck"), nil })
+
+	if err != nil {
+		log.Printf("解析token失败: %s", err.Error())
+		return nil
+	}
+
+	if stclaim, ok := token.Claims.(*ShareTokenClaim); ok && token.Valid {
+		log.Printf("身份验证成功")
+		return stclaim
+	} else {
+		log.Printf("解析token失败")
+
+		return nil
+	}
 }
