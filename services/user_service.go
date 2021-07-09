@@ -21,10 +21,10 @@ func UtilHashPass(pass string) string {
 	return base64.StdEncoding.EncodeToString(sum[:])
 }
 
-func CreateUser(ctx context.Context, req proto.CreateUserREQ) *proto.Base {
+func CreateUser(ctx context.Context, req proto.CreateUserREQ) (err error) {
 	req.PassWord = UtilHashPass(req.PassWord)
 
-	_, err := model.GetUserByUserName(ctx, req.UserName)
+	_, err = model.GetUserByUserName(ctx, req.UserName)
 	if !errors.Is(err, proto.UserNotFound) {
 		return proto.UserAlreadyExist
 	}
@@ -39,18 +39,18 @@ func CreateUser(ctx context.Context, req proto.CreateUserREQ) *proto.Base {
 		return proto.InternalErr
 	}
 
-	return proto.StdSuccess
+	return
 }
 
-func UpdatePsssword(ctx context.Context, userName, newPass string) *proto.Base {
+func UpdatePsssword(ctx context.Context, userName, newPass string) (err error) {
 	newPass = UtilHashPass(newPass)
 
-	err := model.UpdateUserPassWord(ctx, userName, newPass)
+	err = model.UpdateUserPassWord(ctx, userName, newPass)
 	if errors.Is(err, proto.UserNotFound) {
 		return proto.UserNotFound
 	}
 
-	return proto.StdSuccess
+	return
 }
 
 type Claim struct {

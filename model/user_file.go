@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"dwn_th/db"
 	"dwn_th/proto"
 	"errors"
 
@@ -24,7 +23,7 @@ func (f *UserFile) TableName() string {
 }
 
 func TUserFile(ctx context.Context) *gorm.DB {
-	return db.DB.WithContext(ctx).Table("t_user_file")
+	return DB.WithContext(ctx).Table("t_user_file")
 }
 
 func GetFileList(ctx context.Context, pwd string, userID int64) (userfiles []UserFile, err error) {

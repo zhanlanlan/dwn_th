@@ -2,13 +2,12 @@ package model
 
 import (
 	"context"
-	"dwn_th/db"
 	"log"
 	"testing"
 )
 
 func TestCreateUser(t *testing.T) {
-	db.InitDB()
+	InitDB()
 
 	user := User{
 		UserName: "lianghao",
@@ -24,7 +23,7 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	db.InitDB()
+	InitDB()
 
 	userName := "lianghao"
 	err := DeleteUser(context.Background(), userName)
@@ -36,7 +35,7 @@ func TestDeleteUser(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
-	db.InitDB()
+	InitDB()
 
 	userName := "tangpengfei"
 	password := "aaaaaaaaaaaa"
@@ -49,11 +48,11 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestRune(t *testing.T) {
-	db.InitDB()
+	InitDB()
 
 	var u User
 
-	err := db.DB.Table("t_user").Where("user_name = ?", "fuck").Find(&u).Error
+	err := DB.Table("t_user").Where("user_name = ?", "fuck").Find(&u).Error
 	if err != nil {
 		log.Fatalln(err.Error())
 	}

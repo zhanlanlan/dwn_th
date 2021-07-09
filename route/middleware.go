@@ -40,7 +40,11 @@ func Auth(c *gin.Context) {
 		return
 	}()
 	if err != nil {
+		glog.Error("auth failed err: %s", err.Error())
+		c.Abort()
+		return
 	}
+
 	c.Next()
 }
 

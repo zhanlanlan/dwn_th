@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"dwn_th/db"
 	"dwn_th/proto"
 	"errors"
 
@@ -21,7 +20,7 @@ func (u *User) TableName() string {
 }
 
 func TUser(ctx context.Context) *gorm.DB {
-	return db.DB.WithContext(ctx).Table("t_user")
+	return DB.WithContext(ctx).Table("t_user")
 }
 
 func CreateUser(ctx context.Context, user *User) error {

@@ -2,40 +2,35 @@ package storage
 
 import (
 	"crypto/sha256"
+	"dwn_th/utils"
 	"fmt"
 	"hash"
 	"io"
-	"log"
 	"os"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	"github.com/joho/godotenv"
+	"github.com/golang/glog"
 )
 
 var client *oss.Client
 
 func InitOssClient() {
 
-	er := godotenv.Load()
-	if er != nil {
-		log.Fatalf("加载oss参数失败:%s", er.Error())
-	}
-
-	endpoint := os.Getenv("endpoint")
-	accessKeyId := os.Getenv("accessKeyId")
-	accessKeySecret := os.Getenv("accessKeySecret")
+	endpoint := utils.MustGetENV("endpoint")
+	accessKeyId := utils.MustGetENV("accessKeyId")
+	accessKeySecret := utils.MustGetENV("accessKeySecret")
 
 	var err error
 	client, err = oss.New(endpoint, accessKeyId, accessKeySecret)
 	if err != nil {
-		log.Fatalf("连接OSS失败:%s", err.Error())
+		glog.Fatalf("连接OSS失败:%s", err.Error())
 	}
 }
 
 func Test018() *oss.Bucket {
 	buc, err := client.Bucket("test018")
 	if err != nil {
-		log.Fatalf(err.Error())
+		glog.Fatalf(err.Error())
 	}
 
 	return buc

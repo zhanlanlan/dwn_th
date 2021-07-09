@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"dwn_th/db"
 
 	"gorm.io/gorm"
 )
@@ -27,7 +26,7 @@ func (f *File) TableName() string {
 }
 
 func TFile(ctx context.Context) *gorm.DB {
-	return db.DB.WithContext(ctx).Table("t_file")
+	return DB.WithContext(ctx).Table("t_file")
 }
 
 func CreateFile(ctx context.Context, f *File) error {

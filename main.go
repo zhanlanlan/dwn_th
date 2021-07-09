@@ -1,9 +1,7 @@
 package main
 
 import (
-	"dwn_th/handers"
-	"dwn_th/proto"
-	"dwn_th/services"
+	"dwn_th/route"
 	"log"
 	"time"
 
@@ -13,75 +11,16 @@ import (
 
 func main() {
 
-	// {
-	// 	db.InitDB()
-	// 	model.Migerate()
-
-	// 	storage.InitOssClient()
-	// }
-
-	// {
-	// 	server := Route()
-	// 	server.Run()
-	// }
-
-}
-
-//解析token
-func Auth(c *gin.Context) {
-	var claim services.Claim
-	tokenStr := c.GetHeader("token")
-	token, err := jwt.ParseWithClaims(tokenStr, &claim,
-		func(t *jwt.Token) (interface{}, error) { return []byte("fuck"), nil })
-	if err != nil {
-		log.Printf("解析token失败: %s", err.Error())
-		proto.Err(c, proto.InvalidToken)
-		c.Abort()
-		return
+	{
+		route.InitClients()
 	}
-
-	if claim, ok := token.Claims.(*services.Claim); ok && token.Valid {
-		c.Set("user", claim)
-		log.Printf("身份验证成功")
-	} else {
-		log.Printf("解析token失败")
-		proto.Err(c, proto.InvalidToken)
-		c.Abort()
-		return
-	}
-
-	c.Next()
-}
-
-func Route() *gin.Engine {
-	r := gin.Default()
-	r.POST("/login", handers.Login)
-	r.POST("/create", handers.CreateUser)
 
 	{
-		api := r.Group("/api", Auth)
-
-		{
-			user := api.Group("/user")
-
-			user.POST("/updatepassword", handers.UpdatePsssword)
-		}
-
-		{
-			file := api.Group("/file")
-
-			file.POST("/upload/*pwd", handers.Upload)
-			file.POST("/tryUpload", handers.TryUpload)
-			file.POST("/confirmUpload", handers.ConfirmUpload)
-			file.GET("/download/*pwd", handers.Download)
-			file.POST("/mkdir", handers.Mkdir)
-			file.POST("/list/*pwd", handers.List)
-			file.GET("/delete/*pwd", handers.Delete)
-
-		}
+		server := gin.Default()
+		route.Route(server)
+		server.Run()
 	}
 
-	return r
 }
 
 type ShareToken struct {

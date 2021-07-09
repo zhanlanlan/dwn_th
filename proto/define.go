@@ -37,3 +37,28 @@ func Success(c *gin.Context, value interface{}) {
 func Err(c *gin.Context, e *Base) {
 	c.JSON(200, e)
 }
+
+func Wrap(c *gin.Context, data interface{}, err error) {
+	if err != nil {
+		if e, ok := err.(*Base); ok {
+			c.JSON(200, gin.H{
+				"code": e.Code,
+				"msg":  e.Msg,
+			})
+		} else {
+			c.JSON(200, gin.H{
+				"code": InternalErr.Code,
+				"msg":  InternalErr.Msg,
+			})
+		}
+
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 200,
+		"msg":  "success",
+		"data": data,
+	})
+
+}

@@ -2,14 +2,14 @@ package services
 
 import (
 	"context"
-	"dwn_th/db"
+	"dwn_th/model"
 	"dwn_th/proto"
 	"log"
 	"testing"
 )
 
 func TestCreateUser(t *testing.T) {
-	db.InitDB()
+	model.InitDB()
 
 	err := CreateUser(context.Background(), proto.CreateUserREQ{
 		UserName: "唐鹏飞1",

@@ -7,34 +7,36 @@ import (
 	"dwn_th/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
 )
 
 func CreateUser(c *gin.Context) {
 	var req proto.CreateUserREQ
 	if err := c.BindJSON(&req); err != nil {
-		log.Println("反序列化参数失败")
-		proto.Err(c, proto.BadRquest)
+		glog.Errorf("反序列化参数失败 err: %s", err.Error())
+		proto.Wrap(c, nil, proto.BadRquest)
 		return
 	}
 
 	if req.UserName == "" || len([]rune(req.UserName)) > 25 {
-		proto.Err(c, proto.BadUserName)
+		proto.Wrap(c, nil, proto.BadUserName)
 		return
 	}
 
 	if req.PassWord == "" {
-		proto.Err(c, proto.BadPassword)
+		proto.Wrap(c, nil, proto.BadPassword)
 		return
 	}
 
-	ret := services.CreateUser(c, req)
-	proto.Success(c, ret)
+	err := services.CreateUser(c, req)
+
+	proto.Wrap(c, nil, err)
 }
 
 func UpdatePsssword(c *gin.Context) {
 	var req proto.UpdatePssswordREQ
 	if err := c.BindJSON(&req); err != nil {
-		log.Println("反序列化参数失败")
+		glog.Errorf("反序列化参数失败 err: %s", err.Error())
 		proto.Err(c, proto.BadRquest)
 		return
 	}
@@ -46,8 +48,8 @@ func UpdatePsssword(c *gin.Context) {
 		return
 	}
 
-	ret := services.UpdatePsssword(c, claim.User.UserName, req.NewPassWord)
-	proto.Success(c, ret)
+	err := services.UpdatePsssword(c, claim.User.UserName, req.NewPassWord)
+	proto.Wrap(c, nil, err)
 }
 
 func Login(c *gin.Context) {
