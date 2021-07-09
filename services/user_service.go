@@ -8,11 +8,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
 )
 
 func UtilHashPass(pass string) string {
@@ -79,28 +78,33 @@ func ParseToken(token string) (u model.User, err error) {
 	return
 }
 
-func Login(ctx context.Context, userName, passWord string) *proto.Base {
+func Login(ctx context.Context, userName, passWord string) (ret proto.LoginRES, err error) {
 	passWord = UtilHashPass(passWord)
 
 	u, err := model.GetUserByUserName(ctx, userName)
 	if errors.Is(err, proto.UserNotFound) {
-		log.Println("用户不存在")
-		return proto.UserNotFound
+		glog.Errorf("用户 [%s] 不存在", userName)
+		err = proto.UserNotFound
+		return
 	} else if err != nil {
-		log.Printf("登录失败: %s", err.Error())
-		return proto.InternalErr
+		glog.Errorf("model.GetUserByUserName err: %s", err.Error())
+		return
 	}
 
 	if u.PassWord != passWord {
-		return proto.WrongPassword
+		glog.Errorf("用户 [%s] 密码 [%s] 错误", userName, passWord)
+		err = proto.WrongPassword
+		return
 	}
 
-	log.Printf("User: %s logined", u.UserName)
+	glog.Infof("用户 [%s] 登录成功", userName)
 	token, err := GenerateToken(u)
 	if err != nil {
-		log.Printf("login failed: %s", err.Error())
-		return proto.LiginFailed
+		glog.Errorf("GenerateToken err: %s", err.Error())
+		return
 	}
 
-	return &proto.Base{Code: 200, Msg: "success", Data: gin.H{"token": token}}
+	ret.Token = token
+
+	return
 }

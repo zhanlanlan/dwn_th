@@ -5,13 +5,6 @@ import "github.com/gin-gonic/gin"
 type Base struct {
 	Code int64
 	Msg  string
-	Data interface{}
-}
-
-type IErr interface {
-	IntoBase() *Base
-	GetCode() int64
-	GetMsg() string
 }
 
 func (b *Base) GetCode() int64 {
@@ -22,43 +15,44 @@ func (b *Base) GetMsg() string {
 	return b.Msg
 }
 
-func (b *Base) IntoBase() *Base {
-	return b
-}
-
 func (b *Base) Error() string {
 	return b.Msg
 }
 
-func Success(c *gin.Context, value interface{}) {
-	c.JSON(200, value)
+func Success(c *gin.Context, data interface{}) {
+	Wrap(c, data, nil)
 }
 
-func Err(c *gin.Context, e *Base) {
-	c.JSON(200, e)
+func Err(c *gin.Context, err error) {
+	Wrap(c, nil, err)
 }
 
 func Wrap(c *gin.Context, data interface{}, err error) {
 	if err != nil {
 		if e, ok := err.(*Base); ok {
-			c.JSON(200, gin.H{
-				"code": e.Code,
-				"msg":  e.Msg,
-			})
-		} else {
-			c.JSON(200, gin.H{
-				"code": InternalErr.Code,
-				"msg":  InternalErr.Msg,
-			})
+			res(c, e.Code, e.Msg, nil)
+			return
 		}
 
+		res(c, InternalErr.Code, InternalErr.Msg, nil)
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"code": 200,
-		"msg":  "success",
-		"data": data,
-	})
+	res(c, StdSuccess.Code, StdSuccess.Msg, data)
+	return
 
+}
+
+func res(c *gin.Context, code int64, msg string, data interface{}) {
+
+	res := gin.H{
+		"code": code,
+		"msg":  msg,
+	}
+
+	if data != nil {
+		res["data"] = data
+	}
+
+	c.JSON(200, res)
 }

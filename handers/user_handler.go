@@ -14,7 +14,7 @@ func CreateUser(c *gin.Context) {
 	var req proto.CreateUserREQ
 	if err := c.BindJSON(&req); err != nil {
 		glog.Errorf("反序列化参数失败 err: %s", err.Error())
-		proto.Wrap(c, nil, proto.BadRquest)
+		proto.Err(c, err)
 		return
 	}
 

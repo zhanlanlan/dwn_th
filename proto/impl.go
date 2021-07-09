@@ -2,26 +2,26 @@ package proto
 
 var (
 	// basic
-	StdSuccess  = &Base{Code: 200, Msg: "succes"}
-	BadRquest   = &Base{Code: 400, Msg: "参数错误"}
-	InternalErr = &Base{Code: 500, Msg: "服务器内部错误"}
+	StdSuccess  = &Base{200, "succes"}
+	BadRquest   = &Base{400, "参数错误"}
+	InternalErr = &Base{500, "服务器内部错误"}
 
 	// user
-	BadUserName      = &Base{Code: 1000, Msg: "非法的用户名"}
-	WrongPassword    = &Base{Code: 1001, Msg: "密码错误"}
-	UserNotFound     = &Base{Code: 1002, Msg: "该用户不存在"}
-	UserAlreadyExist = &Base{Code: 1003, Msg: "用户已存在"}
-	BadPassword      = &Base{Code: 1004, Msg: "密码不合法"}
-	EmptyUserName    = &Base{Code: 1005, Msg: "用户名不能为空"}
-	EmptyPassword    = &Base{Code: 1006, Msg: "密码不能为空"}
-	InvalidToken     = &Base{Code: 1007, Msg: "token不合法"}
-	LiginFailed      = &Base{Code: 1008, Msg: "登录失败"}
+	BadUserName      = &Base{1000, "非法的用户名"}
+	WrongPassword    = &Base{1001, "密码错误"}
+	UserNotFound     = &Base{1002, "该用户不存在"}
+	UserAlreadyExist = &Base{1003, "用户已存在"}
+	BadPassword      = &Base{1004, "密码不合法"}
+	EmptyUserName    = &Base{1005, "用户名不能为空"}
+	EmptyPassword    = &Base{1006, "密码不能为空"}
+	InvalidToken     = &Base{1007, "token不合法"}
+	LiginFailed      = &Base{1008, "登录失败"}
 
 	// file
-	FileNotFound     = &Base{Code: 2000, Msg: "文件不存在"}
-	DirNotExist      = &Base{Code: 2001, Msg: "目录不存在"}
-	FileAlreadyExist = &Base{Code: 2002, Msg: "文件名已存在"}
-	InvalidDir       = &Base{Code: 2003, Msg: "非法的目录名"}
-	ReadFileFail     = &Base{Code: 2004, Msg: "读取文件失败"}
-	GetTokenFail     = &Base{Code: 2005, Msg: "获取token失败"}
+	FileNotFound     = &Base{2000, "文件不存在"}
+	DirNotExist      = &Base{2001, "目录不存在"}
+	FileAlreadyExist = &Base{2002, "文件名已存在"}
+	InvalidDir       = &Base{2003, "非法的目录名"}
+	ReadFileFail     = &Base{2004, "读取文件失败"}
+	GetTokenFail     = &Base{2005, "获取token失败"}
 )
