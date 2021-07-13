@@ -2,10 +2,7 @@ package main
 
 import (
 	"dwn_th/route"
-	"log"
-	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,49 +18,6 @@ func main() {
 		server.Run()
 	}
 
-}
-
-type ShareToken struct {
-	UserID     int64
-	ExpireTime int64
-	FileName   string
-	FileExt    string
-	FileKey    string
-}
-
-type ShareTokenClaim struct {
-	Sharetoken ShareToken
-	jwt.StandardClaims
-}
-
-func GetShareToken(st ShareToken) (token string, err error) {
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, ShareTokenClaim{
-		Sharetoken: st,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 6).Unix(),
-		},
-	})
-
-	return t.SignedString([]byte("fuck"))
-}
-func VerifyShareToken(t string) *ShareTokenClaim {
-
-	var stclaim ShareTokenClaim
-	token, err := jwt.ParseWithClaims(t, &stclaim, func(token *jwt.Token) (interface{}, error) { return []byte("fuck"), nil })
-
-	if err != nil {
-		log.Printf("解析token失败: %s", err.Error())
-		return nil
-	}
-
-	if stclaim, ok := token.Claims.(*ShareTokenClaim); ok && token.Valid {
-		log.Printf("身份验证成功")
-		return stclaim
-	} else {
-		log.Printf("解析token失败")
-
-		return nil
-	}
 }
 
 // func bubblesort(s []int, m int) {
