@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/golang/glog"
 )
 
 func utilGenerateKey(fileName string) string {
@@ -37,41 +38,41 @@ func createFileKey() string {
 	return strconv.FormatInt(now+rd, 16)
 }
 
-func Download(ctx context.Context, userID int64, pwd string, fileName string) ([]byte, *proto.Base) {
+func Download(ctx context.Context, userID int64, pwd string, fileName string) (data []byte, err error) {
 
 	dbF, err := model.GetFileByOwner(ctx, userID, pwd, fileName)
 	if errors.Is(err, proto.FileNotFound) {
-		log.Printf("文件不存在: %s", err.Error())
-		return nil, proto.FileNotFound
+		glog.Errorf("model.GetFileByOwner err: %s", err.Error())
+		err = proto.FileNotFound
+		return
 	} else if err != nil {
-		log.Printf("查询文件出错: %s", err.Error())
-		return nil, proto.InternalErr
+		glog.Errorf("model.GetFileByOwner err: %s", err.Error())
+		return
 	}
 
 	dbfile, err := model.GetFileById(ctx, dbF.FileId)
-
 	if err != nil {
-		log.Printf("获取文件出错: %s", err.Error())
-		return nil, proto.InternalErr
+		glog.Errorf("model.GetFileById err: %s", err.Error())
+		return
 	}
 
 	rdcloser, err := storage.Get(dbfile.URI)
 	if err != nil {
-		log.Printf("获取文件出错: %s", err.Error())
-		return nil, proto.InternalErr
+		glog.Errorf("storage.Get err: %s", err.Error())
+		return
 	}
 	defer rdcloser.Close()
 
-	file, err := ioutil.ReadAll(rdcloser)
+	data, err = ioutil.ReadAll(rdcloser)
 	if err != nil {
-		log.Printf("下载文件出错: %s", err.Error())
-		return nil, proto.InternalErr
+		glog.Errorf("下载文件出错: %s", err.Error())
+		return
 	}
 
-	return file, proto.StdSuccess
+	return
 }
 
-func Mkdir(ctx context.Context, pwd, name string, userid int64) *proto.Base {
+func Mkdir(ctx context.Context, pwd, name string, userid int64) (err error) {
 	// 检查父目录是否存在
 	pwd = path.Clean(pwd)
 
@@ -79,15 +80,16 @@ func Mkdir(ctx context.Context, pwd, name string, userid int64) *proto.Base {
 	if pwd != "/" {
 		fatherdir, fathername := path.Split(pwd)
 		fatherdir = path.Clean(fatherdir)
-		_, err := model.GetDir(ctx, fatherdir, fathername)
+		_, err = model.GetDir(ctx, fatherdir, fathername)
 		if errors.Is(err, proto.DirNotExist) {
-			return proto.DirNotExist
+			err = proto.DirNotExist
+			return
 		}
 
 	}
 
 	// 校验文件是否已存在
-	_, err := model.GetUserFileByPwdANDFileName(ctx, pwd, name)
+	_, err = model.GetUserFileByPwdANDFileName(ctx, pwd, name)
 	if errors.Is(err, proto.FileNotFound) {
 		// 文件不存在  可以创建目录
 		uf := model.UserFile{
@@ -99,32 +101,32 @@ func Mkdir(ctx context.Context, pwd, name string, userid int64) *proto.Base {
 		}
 		err := model.CreateUserFile(ctx, &uf)
 		if err != nil {
+			glog.Errorf("model.CreateUserFile err: %s", err.Error())
 			return proto.InternalErr
 		}
 
 	} else if err != nil {
 		// 出现其他错误
-		log.Printf("mkdir err: %s", err.Error())
+		glog.Errorf("mkdir err: %s", err.Error())
 		return proto.InternalErr
 	} else {
 		// 文件已存在 不能创建
-		log.Printf("mkdir failed: file already exist")
+		glog.Errorf("mkdir failed: file already exist")
 		return proto.FileAlreadyExist
 	}
 
-	return proto.StdSuccess
+	return
 }
 
-func List(ctx context.Context, pwd string, userId int64) *proto.Base {
+func List(ctx context.Context, pwd string, userId int64) (data []proto.ListRES, err error) {
 
 	userfiles, err := model.GetFileList(ctx, pwd, userId)
 	if err != nil {
-		log.Printf("查询文件出错: %s", err.Error())
-		return proto.InternalErr
+		glog.Errorf("model.GetFileList err: %s", err.Error())
+		return
 	}
 
 	listRes := make([]proto.ListRES, len(userfiles))
-
 	for i, userfile := range userfiles {
 		list := proto.ListRES{
 			Pwd:  userfile.Pwd,
@@ -135,33 +137,26 @@ func List(ctx context.Context, pwd string, userId int64) *proto.Base {
 		listRes[i] = list
 	}
 
-	return &proto.Base{
-		Code: 200,
-		Msg:  "success",
-		Data: listRes,
-	}
+	data = listRes
+	return
 }
 
-func Delete(ctx context.Context, pwd string, userID int64, fileName string) *proto.Base {
-	err := model.DeleteFile(ctx, userID, pwd, fileName)
+func Delete(ctx context.Context, pwd string, userID int64, fileName string) (err error) {
+	err = model.DeleteFile(ctx, userID, pwd, fileName)
 	if err != nil {
-		log.Printf("删除文件出错: %s", err.Error())
-		return proto.InternalErr
+		glog.Errorf("model.DeleteFile err: %s", err.Error())
+		return
 	}
 
-	return proto.StdSuccess
+	return
 }
 
-func TryUpload(ctx context.Context, filehash string, userid int64) *proto.Base {
+func TryUpload(ctx context.Context, filehash string, userid int64) (data proto.TryUploadRES, err error) {
 	file, err := model.GetFileByHash(ctx, filehash)
-
 	if err != nil {
-		log.Printf("文件不存在: %s", err.Error())
-		return &proto.Base{
-			Code: 2000,
-			Msg:  "文件不存在可上传",
-			Data: "",
-		}
+		glog.Errorf("model.GetFileByHash err: %s", err.Error())
+		err = proto.FileNotFound
+		return
 	}
 
 	upload := UploadToken{
@@ -170,18 +165,13 @@ func TryUpload(ctx context.Context, filehash string, userid int64) *proto.Base {
 		UserID:     userid,
 	}
 	uploadtoken, err := GetToken(upload)
-
 	if err != nil {
-		log.Printf("获取token失败: %s", err.Error())
-		return proto.GetTokenFail
-	} else {
-		return &proto.Base{
-			Code: 200,
-			Msg:  "success",
-			Data: uploadtoken,
-		}
+		glog.Errorf("GetToken err: %s", err.Error())
+		return
 	}
 
+	data.Token = uploadtoken
+	return
 }
 
 type UploadToken struct {
@@ -247,7 +237,7 @@ type UploadFileOPT struct {
 	Size     int64
 }
 
-func UploadFile(ctx context.Context, opt UploadFileOPT) *proto.Base {
+func UploadFile(ctx context.Context, opt UploadFileOPT) (data proto.UploadFileRES, err error) {
 
 	pwd := path.Clean(opt.Pwd)
 	fmt.Println("pwd: ", pwd)
@@ -256,7 +246,7 @@ func UploadFile(ctx context.Context, opt UploadFileOPT) *proto.Base {
 		fadir = path.Clean(fadir)
 		_, err := model.GetDir(ctx, fadir, faname)
 		if errors.Is(err, proto.DirNotExist) {
-			return proto.DirNotExist
+			err = proto.DirNotExist
 		}
 	}
 	upt := UploadToken{
@@ -265,12 +255,13 @@ func UploadFile(ctx context.Context, opt UploadFileOPT) *proto.Base {
 		UserID:     opt.UserID,
 	}
 
-	_, err := model.GetFile(ctx, pwd, opt.FileName)
+	_, err = model.GetFile(ctx, pwd, opt.FileName)
 	if errors.Is(err, proto.FileNotFound) {
 		objName := utilGenerateKey(opt.FileName)
-		err := storage.Put(objName, opt.File)
+		err = storage.Put(objName, opt.File)
 		if err != nil {
-			return proto.InternalErr
+			glog.Errorf("storage.Put err: %s", err.Error())
+			return
 		}
 
 		// 更新数据库 关联用户和文件
@@ -283,29 +274,31 @@ func UploadFile(ctx context.Context, opt UploadFileOPT) *proto.Base {
 
 		err = model.CreateFile(ctx, &f)
 		if err != nil {
-			return proto.InternalErr
+			glog.Errorf("model.CreateFile err: %s", err.Error())
+			return
 		}
 	} else if err != nil {
 		// 出现其他错误
-		log.Printf("mkdir err: %s", err.Error())
-		return proto.InternalErr
+		glog.Errorf("model.GetFile err: %s", err.Error())
+		return
 	} else {
 		// 文件已存在 不能创建
-		log.Printf("mkdir failed: file already exist")
-		return proto.FileAlreadyExist
+		glog.Errorf("UploadFile failed: file already exist")
+		err = proto.FileAlreadyExist
+		return
 	}
 
 	// 上传到oss
 
-	uploadtoken, er := GetToken(upt)
-	if er != nil {
-		return proto.GetTokenFail
+	uploadtoken, err := GetToken(upt)
+	if err != nil {
+		glog.Errorf("GetToken err: %s", err.Error())
+		err = proto.GetTokenFail
+		return
 	}
-	return &proto.Base{
-		Code: 200,
-		Msg:  "success",
-		Data: uploadtoken,
-	}
+
+	data.Token = uploadtoken
+	return
 }
 
 func hashFile(f io.Reader) string {
@@ -325,14 +318,13 @@ func hashFile(f io.Reader) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func ConfirmUpload(ctx context.Context, uploadtoken string, userid int64, pwd string, filename string) *proto.Base {
+func ConfirmUpload(ctx context.Context, uploadtoken string, userid int64, pwd string, filename string) (err error) {
 
 	upt := VerifyToken(uploadtoken)
 
 	file, err := model.GetFileByFileKey(ctx, upt.Uploadtoken.FileKey)
-
 	if err != nil {
-		log.Printf("File not found")
+		glog.Errorf("model.GetFileByFileKey err: %s", err.Error())
 		return proto.FileNotFound
 	}
 
@@ -347,9 +339,10 @@ func ConfirmUpload(ctx context.Context, uploadtoken string, userid int64, pwd st
 	}
 	err = model.CreateUserFile(ctx, &uf)
 	if err != nil {
-		return proto.InternalErr
+		glog.Errorf("model.CreateUserFile err: %s", err.Error())
+		return
 	}
-	return proto.StdSuccess
+	return
 
 }
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
 )
 
 func Upload(c *gin.Context) {
@@ -26,44 +27,43 @@ func Upload(c *gin.Context) {
 
 	f, err := file.Open()
 
-	ret := services.UploadFile(c, services.UploadFileOPT{
+	ret, err := services.UploadFile(c, services.UploadFileOPT{
 		UserID:   int64(claim.User.ID),
 		Pwd:      pwd,
 		FileName: file.Filename,
 		File:     f,
 		Size:     file.Size,
 	})
-	proto.Success(c, ret)
+	proto.Wrap(c, ret, err)
 }
 
 func TryUpload(c *gin.Context) {
 
 	claim := Who(c)
 
-	var req proto.TryUpload
+	var req proto.TryUploadREQ
 	if err := c.BindJSON(&req); err != nil {
 		log.Println("反序列化参数失败")
 		proto.Err(c, proto.BadRquest)
 		return
 	}
 
-	ret := services.TryUpload(c, req.Filehash, int64(claim.User.ID))
-	proto.Success(c, ret)
+	ret, err := services.TryUpload(c, req.Filehash, int64(claim.User.ID))
+	proto.Wrap(c, ret, err)
 }
 
 func ConfirmUpload(c *gin.Context) {
 	claim := Who(c)
 
-	var req proto.ConfirmUpload
-
+	var req proto.ConfirmUploadREQ
 	if err := c.BindJSON(&req); err != nil {
 		log.Println("反序列化参数失败")
 		proto.Err(c, proto.BadRquest)
 		return
 	}
 
-	ret := services.ConfirmUpload(c, req.UploadToken, int64(claim.User.ID), req.Pwd, req.FileName)
-	proto.Success(c, ret)
+	err := services.ConfirmUpload(c, req.UploadToken, int64(claim.User.ID), req.Pwd, req.FileName)
+	proto.Wrap(c, nil, err)
 }
 
 // http://localhost:8080/api/file/download?user_id=1&&file_name=简历-x.pdf
@@ -77,14 +77,15 @@ func Download(c *gin.Context) {
 
 	filename, ok := c.GetQuery("file_name")
 	if !ok {
-		log.Printf("需要提供文件名")
+		glog.Errorf("需要提供文件名")
 		proto.Err(c, proto.BadRquest)
 		return
 	}
 
-	file, ret := services.Download(c, int64(claim.User.ID), pwd, filename)
-	if ret != proto.StdSuccess {
-		proto.Err(c, ret)
+	file, err := services.Download(c, int64(claim.User.ID), pwd, filename)
+	if err != nil {
+		glog.Errorf("services.Download err: %s", err.Error())
+		proto.Err(c, err)
 		return
 	}
 
@@ -99,19 +100,19 @@ func Mkdir(c *gin.Context) {
 
 	var req proto.MkdirREQ
 	if err := c.BindJSON(&req); err != nil {
-		log.Println("反序列化参数失败")
+		glog.Errorf("反序列化参数失败")
 		proto.Err(c, proto.BadRquest)
 		return
 	}
 
 	if strings.ContainsRune(req.Name, '/') {
-		log.Printf("非法的目录名: %s", req.Name)
+		glog.Errorf("非法的目录名: %s", req.Name)
 		proto.Err(c, proto.InvalidDir)
 		return
 	}
 
-	ret := services.Mkdir(c, req.Pwd, req.Name, int64(claim.User.ID))
-	proto.Success(c, ret)
+	err := services.Mkdir(c, req.Pwd, req.Name, int64(claim.User.ID))
+	proto.Wrap(c, nil, err)
 }
 
 func List(c *gin.Context) {
@@ -123,8 +124,8 @@ func List(c *gin.Context) {
 		pwd = "/" + pwd
 	}
 
-	ret := services.List(c, pwd, int64(userId))
-	proto.Success(c, ret)
+	ret, err := services.List(c, pwd, int64(userId))
+	proto.Wrap(c, ret, err)
 }
 
 func Delete(c *gin.Context) {
@@ -138,11 +139,11 @@ func Delete(c *gin.Context) {
 
 	filename, ok := c.GetQuery("file_name")
 	if !ok {
-		log.Printf("需要提供文件名")
+		glog.Errorf("需要提供文件名")
 		proto.Err(c, proto.BadRquest)
 		return
 	}
 
-	ret := services.Delete(c, pwd, int64(userId), filename)
-	proto.Success(c, ret)
+	err := services.Delete(c, pwd, int64(userId), filename)
+	proto.Wrap(c, nil, err)
 }

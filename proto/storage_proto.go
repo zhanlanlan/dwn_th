@@ -13,12 +13,20 @@ type ListRES struct {
 	Type          int64  `json:"type,omitempty"`
 }
 
-type TryUpload struct {
+type TryUploadREQ struct {
 	Filehash string `json:"file_hash,omitempty"`
 }
 
-type ConfirmUpload struct {
+type TryUploadRES struct {
+	Token string `json:"token,omitempty"`
+}
+
+type ConfirmUploadREQ struct {
 	UploadToken string `json:"upload_token,omitempty"`
 	Pwd         string `json:"pwd,omitempty"`
 	FileName    string `json:"file_name,omitempty"`
+}
+
+type UploadFileRES struct {
+	Token string `json:"token,omitempty"`
 }
